@@ -1,4 +1,3 @@
-
 #!/bin/sh
 set -e
 
@@ -13,6 +12,23 @@ export_vars
 
 export REPOS_DIR="$WORKDIR/Library/Sources"
 
+# Detect NextBSD - libdispatch is provided by the base system
+if [ -d "/usr/lib/system" ]; then
+  NEXTBSD=1
+  echo "NextBSD detected: using system libdispatch from /usr/lib/system"
+  # config.guess does not recognize NextBSD; tell configure we are FreeBSD
+  ARCH=$(uname -m)
+  case "$ARCH" in
+    amd64) ARCH="x86_64" ;;
+  esac
+  BUILD_FLAG="--build=${ARCH}-nextbsd-freebsd"
+  CMAKE_SYSTEM_FLAG="-DCMAKE_SYSTEM_NAME=FreeBSD"
+else
+  NEXTBSD=0
+  BUILD_FLAG=""
+  CMAKE_SYSTEM_FLAG=""
+fi
+
 cd "$REPOS_DIR/gershwin-system"
 $MAKE_CMD install
 export GNUSTEP_INSTALLATION_DOMAIN="SYSTEM"
@@ -20,47 +36,63 @@ export GNUSTEP_INSTALLATION_DOMAIN="SYSTEM"
 cd "$REPOS_DIR/gershwin-assets"
 cp -R Library/* /System/Library/
 
-# Patch libdispatch
-echo "Patching libdispatch..."
-( cd "$WORKDIR/Library/Patches" && REPO_DIR="$REPOS_DIR/swift-corelibs-libdispatch" sh ./apply_swift-corelibs-libdispatch_patch.sh )
+if [ "$NEXTBSD" -eq 0 ]; then
+  # Patch libdispatch
+  echo "Patching libdispatch..."
+  ( cd "$WORKDIR/Library/Patches" && REPO_DIR="$REPOS_DIR/swift-corelibs-libdispatch" sh ./apply_swift-corelibs-libdispatch_patch.sh )
 
-# Build libdispatch first - provides BlocksRuntime needed by tools-make configure
-echo "Building/installing libdispatch..."
-if [ -d "$REPOS_DIR/swift-corelibs-libdispatch/Build" ] ; then
-  rm -rf "$REPOS_DIR/swift-corelibs-libdispatch/Build"
+  # Build libdispatch first - provides BlocksRuntime needed by tools-make configure
+  echo "Building/installing libdispatch..."
+  if [ -d "$REPOS_DIR/swift-corelibs-libdispatch/Build" ] ; then
+    rm -rf "$REPOS_DIR/swift-corelibs-libdispatch/Build"
+  fi
+  mkdir -p "$REPOS_DIR/swift-corelibs-libdispatch/Build"
+
+  cd "$REPOS_DIR/swift-corelibs-libdispatch/Build"
+
+  cmake .. \
+    -DCMAKE_INSTALL_PREFIX=/System/Library \
+    -DCMAKE_INSTALL_LIBDIR=Libraries \
+    -DINSTALL_DISPATCH_HEADERS_DIR=/System/Library/Headers/dispatch \
+    -DINSTALL_BLOCK_HEADERS_DIR=/System/Library/Headers \
+    -DINSTALL_OS_HEADERS_DIR=/System/Library/Headers/os \
+    -DINSTALL_PRIVATE_HEADERS=ON \
+    -DCMAKE_INSTALL_MANDIR=Documentation/man \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_C_COMPILER=clang \
+    -DCMAKE_CXX_COMPILER=clang++
+
+  "$MAKE_CMD" -j"$CPUS" || exit 1
+  "$MAKE_CMD" install || exit 1
+else
+  echo "Skipping libdispatch build (provided by NextBSD base system)"
 fi
-mkdir -p "$REPOS_DIR/swift-corelibs-libdispatch/Build"
-
-cd "$REPOS_DIR/swift-corelibs-libdispatch/Build"
-
-cmake .. \
-  -DCMAKE_INSTALL_PREFIX=/System/Library \
-  -DCMAKE_INSTALL_LIBDIR=Libraries \
-  -DINSTALL_DISPATCH_HEADERS_DIR=/System/Library/Headers/dispatch \
-  -DINSTALL_BLOCK_HEADERS_DIR=/System/Library/Headers \
-  -DINSTALL_OS_HEADERS_DIR=/System/Library/Headers/os \
-  -DINSTALL_PRIVATE_HEADERS=ON \
-  -DCMAKE_INSTALL_MANDIR=Documentation/man \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_C_COMPILER=clang \
-  -DCMAKE_CXX_COMPILER=clang++
-
-"$MAKE_CMD" -j"$CPUS" || exit 1
-"$MAKE_CMD" install || exit 1
 
 # Build tools-make - can now find _Block_copy in libdispatch's BlocksRuntime
 # Use libobjc_LIBS=" " to prevent configure from adding -lobjc to link tests
 echo "Building/installing tools-make..."
 cd "$REPOS_DIR/tools-make"
 $MAKE_CMD distclean 2>/dev/null || true
-./configure \
-  --with-config-file=/System/Library/Preferences/GNUstep.conf \
-  --with-layout=gershwin \
-  --with-library-combo=ng-gnu-gnu \
-  --with-objc-lib-flag=" " \
-  LDFLAGS="-L/System/Library/Libraries" \
-  CPPFLAGS="-I/System/Library/Headers" \
-  libobjc_LIBS=" "
+if [ "$NEXTBSD" -eq 1 ]; then
+  ./configure \
+    $BUILD_FLAG \
+    --with-config-file=/System/Library/Preferences/GNUstep.conf \
+    --with-layout=gershwin \
+    --with-library-combo=ng-gnu-gnu \
+    --with-objc-lib-flag=" " \
+    LDFLAGS="-L/usr/lib/system" \
+    CPPFLAGS="-I/usr/include" \
+    libobjc_LIBS=" "
+else
+  ./configure \
+    --with-config-file=/System/Library/Preferences/GNUstep.conf \
+    --with-layout=gershwin \
+    --with-library-combo=ng-gnu-gnu \
+    --with-objc-lib-flag=" " \
+    LDFLAGS="-L/System/Library/Libraries" \
+    CPPFLAGS="-I/System/Library/Headers" \
+    libobjc_LIBS=" "
+fi
 $MAKE_CMD || exit 1
 $MAKE_CMD install
 
@@ -75,14 +107,36 @@ mkdir -p "$REPOS_DIR/libobjc2/Build"
 
 cd "$REPOS_DIR/libobjc2/Build"
 
-cmake .. \
-  -DGNUSTEP_INSTALL_TYPE=SYSTEM \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_C_COMPILER=clang \
-  -DCMAKE_CXX_COMPILER=clang++ \
-  -DEMBEDDED_BLOCKS_RUNTIME=OFF \
-  -DBlocksRuntime_INCLUDE_DIR=/System/Library/Headers \
-  -DBlocksRuntime_LIBRARIES=/System/Library/Libraries/libBlocksRuntime.so
+if [ "$NEXTBSD" -eq 1 ]; then
+  # Workaround: Clang silently skips #include "objc-visibility.h" in libobjc2
+  # headers when C++ standard library headers (e.g. <vector>, <functional>) are
+  # included first in ObjC++ translation units.  This leaves OBJC_PUBLIC
+  # undefined, breaking arc.mm and selector_table.cc.  Force-define it as empty
+  # (matching the non-Windows definition in objc-visibility.h).
+  # See: https://github.com/nickhutchinson/libcxx/issues/XXX (if filed upstream)
+  cmake .. \
+    $CMAKE_SYSTEM_FLAG \
+    -DGNUSTEP_INSTALL_TYPE=SYSTEM \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_C_COMPILER=clang \
+    -DCMAKE_CXX_COMPILER=clang++ \
+    '-DCMAKE_C_FLAGS=-DOBJC_PUBLIC=' \
+    '-DCMAKE_CXX_FLAGS=-DOBJC_PUBLIC=' \
+    '-DCMAKE_OBJC_FLAGS=-DOBJC_PUBLIC=' \
+    '-DCMAKE_OBJCXX_FLAGS=-DOBJC_PUBLIC=' \
+    -DEMBEDDED_BLOCKS_RUNTIME=OFF \
+    -DBlocksRuntime_INCLUDE_DIR=/usr/include \
+    -DBlocksRuntime_LIBRARIES=/usr/lib/system/libBlocksRuntime.so
+else
+  cmake .. \
+    -DGNUSTEP_INSTALL_TYPE=SYSTEM \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_C_COMPILER=clang \
+    -DCMAKE_CXX_COMPILER=clang++ \
+    -DEMBEDDED_BLOCKS_RUNTIME=OFF \
+    -DBlocksRuntime_INCLUDE_DIR=/System/Library/Headers \
+    -DBlocksRuntime_LIBRARIES=/System/Library/Libraries/libBlocksRuntime.so
+fi
 
 "$MAKE_CMD" -j"$CPUS" || exit 1
 "$MAKE_CMD" install || exit 1
@@ -90,9 +144,17 @@ cmake .. \
 export GNUSTEP_INSTALLATION_DOMAIN="SYSTEM"
 
 cd "$REPOS_DIR/libs-base"
-./configure \
-  --with-dispatch-include=/System/Library/Headers \
-  --with-dispatch-library=/System/Library/Libraries
+if [ "$NEXTBSD" -eq 1 ]; then
+  ./configure \
+    $BUILD_FLAG \
+    --with-dispatch-include=/usr/include \
+    --with-dispatch-library=/usr/lib/system \
+    --with-zeroconf-api=mdns
+else
+  ./configure \
+    --with-dispatch-include=/System/Library/Headers \
+    --with-dispatch-library=/System/Library/Libraries
+fi
 $MAKE_CMD -j"$CPUS" || exit 1
 $MAKE_CMD install
 $MAKE_CMD clean
@@ -103,7 +165,7 @@ echo "Patching libs-gui..."
 ( cd "$WORKDIR/Library/Patches" && REPO_DIR="$REPOS_DIR/libs-gui" sh ./apply_libs-gui-menu-dropdown-tracking_patch.sh ) # https://github.com/gnustep/libs-back/issues/76
 
 cd "$REPOS_DIR/libs-gui"
-./configure
+./configure $BUILD_FLAG
 $MAKE_CMD -j"$CPUS" || exit 1
 $MAKE_CMD install
 $MAKE_CMD clean
@@ -114,7 +176,7 @@ echo "Patching libs-back..."
 
 cd "$REPOS_DIR/libs-back"
 export fonts=no
-./configure
+./configure $BUILD_FLAG
 $MAKE_CMD -j"$CPUS" || exit 1
 $MAKE_CMD install
 $MAKE_CMD clean
@@ -128,7 +190,7 @@ $MAKE_CMD clean
 
 cd "$REPOS_DIR/gershwin-workspace"
 autoreconf -fi
-./configure
+./configure $BUILD_FLAG
 $MAKE_CMD -j"$CPUS" || exit 1
 $MAKE_CMD install
 $MAKE_CMD clean
@@ -166,7 +228,7 @@ $MAKE_CMD install
 $MAKE_CMD clean
 
 cd "$REPOS_DIR/gershwin-components/Menu"
-./configure || exit 1
+./configure $BUILD_FLAG || exit 1
 $MAKE_CMD CPPFLAGS="-DGNUSTEP_INSTALL_TYPE=SYSTEM" -j"$CPUS" || exit 1
 $MAKE_CMD install
 $MAKE_CMD clean
