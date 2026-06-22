@@ -25,3 +25,4 @@ wget
 cups
 freerdp
 libvncserver
+libarchive
