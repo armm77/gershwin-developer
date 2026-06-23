@@ -62,18 +62,19 @@ for REPO in $REPOS; do
     fi
 done
 
+checkout_commit() {
+    REPO="$1"
+    COMMIT="$2"
+    (
+        cd "$REPO"
+        git checkout "$COMMIT"
+    )
+}
+
 # Apply pinned commits if requested
 if [ "$PINNED" -eq 1 ]; then
     echo "Checking out pinned commits..."
 
-    checkout_commit() {
-        REPO="$1"
-        COMMIT="$2"
-        (
-            cd "$REPO"
-            git checkout "$COMMIT"
-        )
-    }
     # These are upstream libraries, we pin them in order to not develop for a moving target
     checkout_commit libobjc2                     4148a3d
     checkout_commit libs-back                    bf3b3ce # Patch by okt
