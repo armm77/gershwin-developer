@@ -62,19 +62,18 @@ for REPO in $REPOS; do
     fi
 done
 
-checkout_commit() {
-    REPO="$1"
-    COMMIT="$2"
-    (
-        cd "$REPO"
-        git checkout "$COMMIT"
-    )
-}
-
 # Apply pinned commits if requested
 if [ "$PINNED" -eq 1 ]; then
     echo "Checking out pinned commits..."
 
+    checkout_commit() {
+        REPO="$1"
+        COMMIT="$2"
+        (
+            cd "$REPO"
+            git checkout "$COMMIT"
+        )
+    }
     # These are upstream libraries, we pin them in order to not develop for a moving target
     checkout_commit libobjc2                     4148a3d
     checkout_commit libs-back                    bf3b3ce # Patch by okt
@@ -94,9 +93,6 @@ fi
 # checkout_commit gershwin-systempreferences   8d49f50
 # checkout_commit gershwin-terminal            71124e3
 # checkout_commit gershwin-textedit            3df6db8
-
-# Temporarily use a WM branch until it is tested well enough to be merged
-checkout_commit gershwin-workspace       metadata
 
 # Lower CMake version requirements
 # Use a temp-file approach for in-place sed to avoid -i portability issues
