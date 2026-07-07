@@ -62,3 +62,4 @@ libavutil-dev
 libswresample-dev
 libswscale-dev
 libavfilter-dev
+libao-dev
