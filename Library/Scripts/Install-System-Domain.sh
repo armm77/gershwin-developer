@@ -6,6 +6,7 @@ if [ "$FROM_MAKEFILE" != "1" ]; then
     exit 1
 fi
 
+export PATH="${PATH}:/Developer/Library/Scripts"
 . ./Library/Scripts/Functions.sh
 detect_platform
 export_vars
@@ -68,7 +69,7 @@ build_corelibs() {
 
   # Patch libdispatch (FreeBSD timer-spin fix; harmless on other platforms).
   echo "Patching libdispatch..."
-  ( cd "$WORKDIR/Library/Patches" && REPO_DIR="$REPOS_DIR/swift-corelibs-libdispatch" sh ./apply_swift-corelibs-libdispatch_patch.sh )
+  patch.sh swift-corelibs-libdispatch
 
   # Gershwin apps must link the portable, NON-Mach libdispatch. On stock
   # FreeBSD/Linux this happens automatically (no <mach/mach.h> present, so the
@@ -198,8 +199,7 @@ build_corelibs() {
 
   # Patch libs-gui
   echo "Patching libs-gui..."
-  ( cd "$WORKDIR/Library/Patches" && REPO_DIR="$REPOS_DIR/libs-gui" sh ./apply_libs-gui-menu-mouseup_patch.sh )
-  ( cd "$WORKDIR/Library/Patches" && REPO_DIR="$REPOS_DIR/libs-gui" sh ./apply_libs-gui-menu-dropdown-tracking_patch.sh ) # https://github.com/gnustep/libs-back/issues/76
+  patch.sh libs-gui
 
   cd "$REPOS_DIR/libs-gui"
   ./configure $BUILD_FLAG
@@ -209,7 +209,7 @@ build_corelibs() {
 
   # Patch libs-back
   echo "Patching libs-back..."
-  ( cd "$WORKDIR/Library/Patches" && REPO_DIR="$REPOS_DIR/libs-back" sh ./apply_libs_back_net_wm_pid_patch.sh ) # https://github.com/gnustep/libs-back/issues/74
+  patch.sh libs-back # https://github.com/gnustep/libs-back/issues/74
 
   cd "$REPOS_DIR/libs-back"
   export fonts=no
@@ -227,7 +227,7 @@ build_corelibs() {
 
   # Patch libs-av
   echo "Patching libs-av..."
-  ( cd "$WORKDIR/Library/Patches" && REPO_DIR="$REPOS_DIR/libs-av" sh ./apply_libs-av-metadata_patch.sh ) # https://github.com/gnustep/libs-av/pull/1
+  patch.sh libs-av # https://github.com/gnustep/libs-av/pull/1
 
   cd "$REPOS_DIR/libs-av"
   $MAKE_CMD -j"$CPUS" || exit 1
