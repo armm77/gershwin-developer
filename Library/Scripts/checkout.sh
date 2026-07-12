@@ -2,7 +2,7 @@
 set -e
 
 # Enable pinned commits with:
-#   PINNED=1 ./Library/Scripts/Checkout.sh
+#   PINNED=1 ./Library/Scripts/checkout.sh
 
 PINNED="${PINNED:-0}"
 

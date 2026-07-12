@@ -7,7 +7,7 @@ if [ "$FROM_MAKEFILE" != "1" ]; then
 fi
 
 export PATH="${PATH}:$(cd "$(dirname "$0")" && pwd -P)"
-. ./Library/Scripts/Functions.sh
+. ./Library/Scripts/functions.sh
 detect_platform
 export_vars
 

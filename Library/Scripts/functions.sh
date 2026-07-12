@@ -66,7 +66,7 @@ export_vars() {
 }
 
 # Prevent this script from being run directly
-if [ "${0##*/}" = "Functions.sh" ]; then
+if [ "${0##*/}" = "functions.sh" ]; then
     echo "This script is a library and must be sourced, not executed directly."
     exit 1
 fi

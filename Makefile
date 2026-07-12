@@ -11,35 +11,35 @@ system: check_root
 		echo "Gershwin System Domain appears to be already installed."; \
 	else \
 		echo "Installing GNUstep System Domain..."; \
-		FROM_MAKEFILE=1 sh ./Library/Scripts/Install-System-Domain.sh all; \
+		FROM_MAKEFILE=1 sh ./Library/Scripts/install-system-domain.sh all; \
 	fi
 
 # Granular build targets. Each builds a single component from
 # Library/Sources, assuming the core libraries are already installed
 # (run "make corelibs" first). Useful for per-repo CI.
 corelibs: check_root
-	@FROM_MAKEFILE=1 sh ./Library/Scripts/Install-System-Domain.sh corelibs
+	@FROM_MAKEFILE=1 sh ./Library/Scripts/install-system-domain.sh corelibs
 
 workspace: check_root
-	@FROM_MAKEFILE=1 sh ./Library/Scripts/Install-System-Domain.sh workspace
+	@FROM_MAKEFILE=1 sh ./Library/Scripts/install-system-domain.sh workspace
 
 systempreferences: check_root
-	@FROM_MAKEFILE=1 sh ./Library/Scripts/Install-System-Domain.sh systempreferences
+	@FROM_MAKEFILE=1 sh ./Library/Scripts/install-system-domain.sh systempreferences
 
 eau-theme: check_root
-	@FROM_MAKEFILE=1 sh ./Library/Scripts/Install-System-Domain.sh eau-theme
+	@FROM_MAKEFILE=1 sh ./Library/Scripts/install-system-domain.sh eau-theme
 
 terminal: check_root
-	@FROM_MAKEFILE=1 sh ./Library/Scripts/Install-System-Domain.sh terminal
+	@FROM_MAKEFILE=1 sh ./Library/Scripts/install-system-domain.sh terminal
 
 textedit: check_root
-	@FROM_MAKEFILE=1 sh ./Library/Scripts/Install-System-Domain.sh textedit
+	@FROM_MAKEFILE=1 sh ./Library/Scripts/install-system-domain.sh textedit
 
 windowmanager: check_root
-	@FROM_MAKEFILE=1 sh ./Library/Scripts/Install-System-Domain.sh windowmanager
+	@FROM_MAKEFILE=1 sh ./Library/Scripts/install-system-domain.sh windowmanager
 
 components: check_root
-	@FROM_MAKEFILE=1 sh ./Library/Scripts/Install-System-Domain.sh components
+	@FROM_MAKEFILE=1 sh ./Library/Scripts/install-system-domain.sh components
 
 uninstall: check_root
 	@if [ -d "/usr/lib/system" ]; then \

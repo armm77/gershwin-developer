@@ -24,8 +24,8 @@ After installing, configuring the above requirements run the following commands 
 ```
 #  Get the rest of the requirements for building
 git clone https://github.com/gershwin-desktop/gershwin-developer.git /Developer
-/Developer/Library/Scripts/Bootstrap.sh
-/Developer/Library/Scripts/Checkout.sh
+/Developer/Library/Scripts/bootstrap.sh
+/Developer/Library/Scripts/checkout.sh
 # Build and install Gershwin from sources
 cd /Developer && make install
 ```
@@ -94,11 +94,11 @@ make workspace
 
 ## Skipping repositories during checkout
 
-`Checkout.sh` clones every repository the build needs. Set `SKIP_REPOS` to a
+`checkout.sh` clones every repository the build needs. Set `SKIP_REPOS` to a
 space- or comma-separated list of repository names to skip cloning/updating some
 of them — handy when you provide a repository's sources yourself (for example a
 CI checkout of the component under test, symlinked into `Library/Sources/`):
 
 ```
-SKIP_REPOS="gershwin-workspace gershwin-terminal" /Developer/Library/Scripts/Checkout.sh
+SKIP_REPOS="gershwin-workspace gershwin-terminal" /Developer/Library/Scripts/checkout.sh
 ```
