@@ -26,4 +26,5 @@ curl
 cups
 freerdp
 libvncserver
+libXrandr
 libarchive
