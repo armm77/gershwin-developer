@@ -29,6 +29,7 @@ libxcb
 xcb-util-cursor
 xcb-util-wm
 xorg-xrandr
+xorg-xprop
 libxrandr
 wget
 cups

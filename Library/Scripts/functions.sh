@@ -54,8 +54,19 @@ get_cpu_count() {
     echo "$CPU_COUNT"
 }
 
+ensure_admin_path() {
+    for DIR in /usr/local/sbin /usr/sbin /sbin; do
+        case ":$PATH:" in
+            *":$DIR:"*) ;;
+            *) PATH="${PATH:+$PATH:}$DIR" ;;
+        esac
+    done
+    export PATH
+}
+
 # Export shared environment
 export_vars() {
+    ensure_admin_path
     export WORKDIR="$(pwd)"
     export REPOS_DIR="$WORKDIR/Library/Sources"
     export CPUS="$(get_cpu_count)"

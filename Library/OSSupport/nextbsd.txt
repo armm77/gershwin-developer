@@ -26,6 +26,7 @@ xcb-util-cursor
 xcb-util
 xcb-util-wm
 xrandr
+xprop
 libXrandr
 wget
 curl

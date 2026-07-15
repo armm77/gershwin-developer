@@ -56,16 +56,29 @@ ensure_gnustep_env() {
     exit 1
   fi
   . /System/Library/Makefiles/GNUstep.sh
+  ensure_admin_path
   export GNUSTEP_INSTALLATION_DOMAIN="SYSTEM"
+}
+
+fix_gnustep_preferences_permissions() {
+  PREFS_DIR=/System/Library/Preferences
+
+  if [ ! -d "$PREFS_DIR" ]; then
+    return 0
+  fi
+
+  find "$PREFS_DIR" -type f \( -name '*.plist' -o -name 'GNUstep.conf' \) -exec chmod go-w {} +
 }
 
 build_corelibs() {
   cd "$REPOS_DIR/gershwin-system"
   $MAKE_CMD install
+  fix_gnustep_preferences_permissions
   export GNUSTEP_INSTALLATION_DOMAIN="SYSTEM"
 
   cd "$REPOS_DIR/gershwin-assets"
   cp -R Library/* /System/Library/
+  fix_gnustep_preferences_permissions
 
   # Patch libdispatch (FreeBSD timer-spin fix; harmless on other platforms).
   echo "Patching libdispatch..."
@@ -142,8 +155,10 @@ build_corelibs() {
     libobjc_LIBS=" "
   $MAKE_CMD || exit 1
   $MAKE_CMD install
+  fix_gnustep_preferences_permissions
 
   . /System/Library/Makefiles/GNUstep.sh
+  ensure_admin_path
 
   # Build libobjc2 - gnustep-config now available for paths
   echo "Building/installing libobjc2..."
